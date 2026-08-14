@@ -19,7 +19,11 @@ function loadCountries() {
             return response.json();
         })
         .then(function(data) {
-            displayCountries(data.slice(0, 12));
+            var countryList = Array.isArray(data) ? data : (data.data || []);
+            if (!Array.isArray(countryList) || countryList.length === 0) {
+                throw new Error('Invalid data format received');
+            }
+            displayCountries(countryList.slice(0, 12));
         })
         .catch(function(error) {
             console.error('Error:', error);
@@ -45,7 +49,8 @@ function searchCountry() {
             return response.json();
         })
         .then(function(data) {
-            displayCountries(data);
+            var countryList = Array.isArray(data) ? data : (data.data || [data]);
+            displayCountries(countryList);
         })
         .catch(function(error) {
             console.error('Error:', error);
@@ -57,7 +62,7 @@ function displayCountries(countries) {
     var displayArea = document.getElementById("displayArea");
     displayArea.innerHTML = "";
 
-    if (!countries || countries.length === 0) {
+    if (!countries || !Array.isArray(countries) || countries.length === 0) {
         showError("No countries found");
         return;
     }
