@@ -1,4 +1,4 @@
-var countriesUrl = "https://restcountries.com/v5";
+var countriesUrl = "https://restcountries.com/v3.1";
 var weatherUrl = "https://api.openweathermap.org/data/2.5/weather";
 var weatherApiKey = "9c0712d91cba98b57a4ed10186fe99bf";
 
