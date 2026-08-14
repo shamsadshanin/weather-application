@@ -1,5 +1,5 @@
-var countriesUrl = "/api/countries";
-var requiredFields = "?fields=name,capital,population,region,currencies,flags";
+var countriesUrl = "https://api.restcountries.com/countries/v5";
+var countriesToken = "rc_live_651d4e97dace45be8b39ec980c2920f8";
 
 var weatherUrl = "https://api.openweathermap.org/data/2.5/weather";
 var weatherApiKey = "9c0712d91cba98b57a4ed10186fe99bf";
@@ -11,24 +11,25 @@ window.onload = function() {
 function loadCountries() {
     showLoading();
 
-    fetch(countriesUrl + "/all" + requiredFields)
-        .then(function(response) {
-            if (!response.ok) {
-                throw new Error('API response was not ok');
-            }
-            return response.json();
-        })
-        .then(function(data) {
-            var countryList = Array.isArray(data) ? data : (data.data || []);
-            if (!Array.isArray(countryList) || countryList.length === 0) {
-                throw new Error('Invalid data format received');
-            }
-            displayCountries(countryList.slice(0, 12));
-        })
-        .catch(function(error) {
-            console.error('Error:', error);
-            showError("Failed to load countries. Please try refreshing.");
-        });
+    fetch(countriesUrl, {
+        headers: {
+            'Authorization': 'Bearer ' + countriesToken
+        }
+    })
+    .then(function(response) {
+        if (!response.ok) {
+            throw new Error('API response was not ok');
+        }
+        return response.json();
+    })
+    .then(function(data) {
+        var countryList = Array.isArray(data) ? data : (data.data || []);
+        displayCountries(countryList.slice(0, 12));
+    })
+    .catch(function(error) {
+        console.error('Error:', error);
+        showError("Failed to load countries. Please check your API token or connection.");
+    });
 }
 
 function searchCountry() {
@@ -41,21 +42,25 @@ function searchCountry() {
 
     showLoading();
 
-    fetch(countriesUrl + "/name/" + encodeURIComponent(searchTerm) + requiredFields)
-        .then(function(response) {
-            if (!response.ok) {
-                throw new Error('Country not found');
-            }
-            return response.json();
-        })
-        .then(function(data) {
-            var countryList = Array.isArray(data) ? data : (data.data || [data]);
-            displayCountries(countryList);
-        })
-        .catch(function(error) {
-            console.error('Error:', error);
-            showError("Country not found. Please try again.");
-        });
+    fetch(countriesUrl + "?q=" + encodeURIComponent(searchTerm), {
+        headers: {
+            'Authorization': 'Bearer ' + countriesToken
+        }
+    })
+    .then(function(response) {
+        if (!response.ok) {
+            throw new Error('Country not found');
+        }
+        return response.json();
+    })
+    .then(function(data) {
+        var countryList = Array.isArray(data) ? data : (data.data || []);
+        displayCountries(countryList);
+    })
+    .catch(function(error) {
+        console.error('Error:', error);
+        showError("Country not found. Please try again.");
+    });
 }
 
 function displayCountries(countries) {
@@ -78,23 +83,36 @@ function createCountryCard(country) {
     card.className = "country-card";
 
     var capital = "N/A";
-    if (country.capital && country.capital.length > 0) {
+    if (Array.isArray(country.capital) && country.capital.length > 0) {
         capital = country.capital[0];
+    } else if (typeof country.capital === "string" && country.capital.length > 0) {
+        capital = country.capital;
     }
 
     var population = country.population ? Number(country.population).toLocaleString() : "N/A";
     var region = country.region || "N/A";
-    var countryName = (country.name && country.name.common) ? country.name.common : "Unknown";
+    var countryName = (country.name && country.name.common) ? country.name.common : (country.name || "Unknown");
 
     var currency = "N/A";
     if (country.currencies) {
-        var currencyKeys = Object.keys(country.currencies);
-        if (currencyKeys.length > 0) {
-            currency = country.currencies[currencyKeys[0]].name || "N/A";
+        if (typeof country.currencies === "string") {
+            currency = country.currencies;
+        } else {
+            var currencyKeys = Object.keys(country.currencies);
+            if (currencyKeys.length > 0) {
+                var currObj = country.currencies[currencyKeys[0]];
+                currency = typeof currObj === "string" ? currObj : (currObj.name || currencyKeys[0]);
+            }
         }
     }
 
-    var flagUrl = country.flags ? (country.flags.png || country.flags.svg) : "";
+    var flagUrl = "";
+    if (country.flags) {
+        flagUrl = country.flags.png || country.flags.svg || country.flags;
+    } else if (country.flag) {
+        flagUrl = country.flag;
+    }
+
     var safeCapital = String(capital).replace(/'/g, "\\'");
     var safeCountryName = String(countryName).replace(/'/g, "\\'");
 
