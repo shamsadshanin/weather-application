@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Country Explorer</title>
+    
+</head>
+<body>
+    <nav class="navbar">
+        <h2>Country Explorer</h2>
+        <ul>
+            <li><a href="#">Home</a></li>
+            <li><a href="#">Countries</a></li>
+            <li><a href="#">About</a></li>
+        </ul>
+    </nav>
+
+    <div class="main-content">
+        <div class="header-section">
+            <h1>Explore Countries</h1>
+            <p>Search for any country and get detailed information</p>
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Enter country name..." onkeypress="if(event.key === 'Enter') searchCountry()">
+            <button onclick="searchCountry()">Search</button>
+        </div>
+
+        <div id="displayArea" class="countries-grid"></div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal()"></div>
+    <div class="weather-modal" id="weatherModal">
+        <div class="modal-header">
+            <h3 id="modalTitle">Weather Details</h3>
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="weather-info" id="weatherInfo"></div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p>Country Explorer</p>
+            <p>Data from REST Countries API and OpenWeatherMap</p>
+            <p>&copy; 2026 All Rights Reserved</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
