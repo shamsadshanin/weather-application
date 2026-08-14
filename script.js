@@ -11,7 +11,8 @@ window.onload = function() {
 function loadCountries() {
     showLoading();
 
-    fetch(countriesUrl, {
+    // The v5 API requires a query parameter to fetch a list
+    fetch(countriesUrl + "?q=a", {
         headers: {
             'Authorization': 'Bearer ' + countriesToken
         }
