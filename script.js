@@ -1,6 +1,4 @@
-var countriesUrl = "https://api.restcountries.com/countries/v5";
-var countriesToken = "rc_live_651d4e97dace45be8b39ec980c2920f8";
-
+var allCountriesData = [];
 var weatherUrl = "https://api.openweathermap.org/data/2.5/weather";
 var weatherApiKey = "9c0712d91cba98b57a4ed10186fe99bf";
 
@@ -11,64 +9,55 @@ window.onload = function() {
 function loadCountries() {
     showLoading();
 
-    // The v5 API requires a query parameter to fetch a list
-    fetch(countriesUrl + "?q=a", {
-        headers: {
-            'Authorization': 'Bearer ' + countriesToken
-        }
-    })
-    .then(function(response) {
-        if (!response.ok) {
-            throw new Error('API response was not ok');
-        }
-        return response.json();
-    })
-    .then(function(data) {
-        var countryList = Array.isArray(data) ? data : (data.data || []);
-        displayCountries(countryList.slice(0, 12));
-    })
-    .catch(function(error) {
-        console.error('Error:', error);
-        showError("Failed to load countries. Please check your API token or connection.");
-    });
+    // Fast, reliable open-source countries dataset mirror (No 403 / No CORS issues)
+    fetch("https://raw.githubusercontent.com/mledoze/countries/master/countries.json")
+        .then(function(response) {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(function(data) {
+            allCountriesData = data;
+            displayCountries(allCountriesData.slice(0, 12));
+        })
+        .catch(function(error) {
+            console.error('Error:', error);
+            showError("Failed to load countries. Please try refreshing.");
+        });
 }
 
 function searchCountry() {
-    var searchTerm = document.getElementById("searchInput").value.trim();
+    var searchTerm = document.getElementById("searchInput").value.trim().toLowerCase();
     
     if (searchTerm === "") {
-        loadCountries();
+        displayCountries(allCountriesData.slice(0, 12));
         return;
     }
 
     showLoading();
 
-    fetch(countriesUrl + "?q=" + encodeURIComponent(searchTerm), {
-        headers: {
-            'Authorization': 'Bearer ' + countriesToken
-        }
-    })
-    .then(function(response) {
-        if (!response.ok) {
-            throw new Error('Country not found');
-        }
-        return response.json();
-    })
-    .then(function(data) {
-        var countryList = Array.isArray(data) ? data : (data.data || []);
-        displayCountries(countryList);
-    })
-    .catch(function(error) {
-        console.error('Error:', error);
-        showError("Country not found. Please try again.");
+    // Instant, client-side search across country names & capitals
+    var filtered = allCountriesData.filter(function(country) {
+        var commonName = (country.name && country.name.common) ? country.name.common.toLowerCase() : "";
+        var officialName = (country.name && country.name.official) ? country.name.official.toLowerCase() : "";
+        var capital = (country.capital && country.capital.length > 0) ? country.capital[0].toLowerCase() : "";
+
+        return commonName.includes(searchTerm) || officialName.includes(searchTerm) || capital.includes(searchTerm);
     });
+
+    if (filtered.length > 0) {
+        displayCountries(filtered);
+    } else {
+        showError("No countries found matching \"" + searchTerm + "\".");
+    }
 }
 
 function displayCountries(countries) {
     var displayArea = document.getElementById("displayArea");
     displayArea.innerHTML = "";
 
-    if (!countries || !Array.isArray(countries) || countries.length === 0) {
+    if (!countries || countries.length === 0) {
         showError("No countries found");
         return;
     }
@@ -84,35 +73,26 @@ function createCountryCard(country) {
     card.className = "country-card";
 
     var capital = "N/A";
-    if (Array.isArray(country.capital) && country.capital.length > 0) {
+    if (country.capital && country.capital.length > 0) {
         capital = country.capital[0];
-    } else if (typeof country.capital === "string" && country.capital.length > 0) {
-        capital = country.capital;
     }
 
     var population = country.population ? Number(country.population).toLocaleString() : "N/A";
     var region = country.region || "N/A";
-    var countryName = (country.name && country.name.common) ? country.name.common : (country.name || "Unknown");
+    var countryName = (country.name && country.name.common) ? country.name.common : "Unknown";
 
     var currency = "N/A";
     if (country.currencies) {
-        if (typeof country.currencies === "string") {
-            currency = country.currencies;
-        } else {
-            var currencyKeys = Object.keys(country.currencies);
-            if (currencyKeys.length > 0) {
-                var currObj = country.currencies[currencyKeys[0]];
-                currency = typeof currObj === "string" ? currObj : (currObj.name || currencyKeys[0]);
-            }
+        var currencyKeys = Object.keys(country.currencies);
+        if (currencyKeys.length > 0) {
+            var currObj = country.currencies[currencyKeys[0]];
+            currency = typeof currObj === "string" ? currObj : (currObj.name || currencyKeys[0]);
         }
     }
 
-    var flagUrl = "";
-    if (country.flags) {
-        flagUrl = country.flags.png || country.flags.svg || country.flags;
-    } else if (country.flag) {
-        flagUrl = country.flag;
-    }
+    // Flag URL generated using country 2-letter ISO code
+    var cca2 = country.cca2 ? country.cca2.toLowerCase() : "";
+    var flagUrl = cca2 ? "https://flagcdn.com/w320/" + cca2 + ".png" : "https://via.placeholder.com/320x180?text=No+Flag";
 
     var safeCapital = String(capital).replace(/'/g, "\\'");
     var safeCountryName = String(countryName).replace(/'/g, "\\'");
