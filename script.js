@@ -1,4 +1,4 @@
-var countriesUrl = "https://restcountries.com/v3.1";
+var countriesUrl = "/api/countries";
 var requiredFields = "?fields=name,capital,population,region,currencies,flags";
 
 var weatherUrl = "https://api.openweathermap.org/data/2.5/weather";
