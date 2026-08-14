@@ -2,25 +2,27 @@ var countriesUrl = "https://restcountries.com/v3.1";
 var weatherUrl = "https://api.openweathermap.org/data/2.5/weather";
 var weatherApiKey = "9c0712d91cba98b57a4ed10186fe99bf";
 
+var requiredFields = "?fields=name,capital,population,region,currencies,flags";
+
 window.onload = function() {
     loadCountries();
 };
 
 function loadCountries() {
     showLoading();
-    fetch(countriesUrl + "/all")
+    fetch(countriesUrl + "/all" + requiredFields)
         .then(function(response) {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
             return response.json();
         })
-        .then(function(result) {
-            if (result.success && result.data) {
-                displayCountries(result.data.slice(0, 12));
-            } else {
-                showError("Failed to load countries");
-            }
+        .then(function(data) {
+            displayCountries(data.slice(0, 12));
         })
         .catch(function(error) {
-            showError("Failed to load countries");
+            console.error('Error:', error);
+            showError("Failed to load countries. Please try refreshing.");
         });
 }
 
@@ -32,18 +34,18 @@ function searchCountry() {
     }
 
     showLoading();
-    fetch(countriesUrl + "/name/" + searchTerm)
+    fetch(countriesUrl + "/name/" + encodeURIComponent(searchTerm) + requiredFields)
         .then(function(response) {
+            if (!response.ok) {
+                throw new Error('Country not found');
+            }
             return response.json();
         })
-        .then(function(result) {
-            if (result.success && result.data && result.data.length > 0) {
-                displayCountries(result.data);
-            } else {
-                showError("Country not found. Please try again.");
-            }
+        .then(function(data) {
+            displayCountries(data);
         })
         .catch(function(error) {
+            console.error('Error:', error);
             showError("Country not found. Please try again.");
         });
 }
@@ -51,6 +53,11 @@ function searchCountry() {
 function displayCountries(countries) {
     var displayArea = document.getElementById("displayArea");
     displayArea.innerHTML = "";
+
+    if (!countries || countries.length === 0) {
+        showError("No countries found");
+        return;
+    }
 
     countries.forEach(function(country) {
         var card = createCountryCard(country);
@@ -71,16 +78,23 @@ function createCountryCard(country) {
     var region = country.region || "N/A";
     
     var currency = "N/A";
-    if (country.currencies && Object.keys(country.currencies).length > 0) {
-        var currencyKey = Object.keys(country.currencies)[0];
-        currency = country.currencies[currencyKey].name;
+    if (country.currencies) {
+        var currencyKeys = Object.keys(country.currencies);
+        if (currencyKeys.length > 0) {
+            currency = country.currencies[currencyKeys[0]].name;
+        }
     }
 
-    var flagUrl = "https://flagcdn.com/w320/" + country.cca2.toLowerCase() + ".png";
+    var flagUrl = country.flags ? (country.flags.png || country.flags.svg) : "";
+    var countryName = (country.name && country.name.common) ? country.name.common : "Unknown";
+
+    // Escape single quotes for inline onclick handler
+    var safeCapital = capital.replace(/'/g, "\\'");
+    var safeCountryName = countryName.replace(/'/g, "\\'");
 
     card.innerHTML = `
-        <img src="${flagUrl}" class="country-flag" alt="Flag of ${country.name.common}">
-        <div class="country-name">${country.name.common}</div>
+        <img src="${flagUrl}" class="country-flag" alt="Flag of ${countryName}" onerror="this.src='https://via.placeholder.com/320x180?text=No+Flag'">
+        <div class="country-name">${countryName}</div>
         <div class="country-info">
             <div class="info-row">
                 <span class="info-label">Capital:</span>
@@ -99,7 +113,7 @@ function createCountryCard(country) {
                 <span class="info-value">${currency}</span>
             </div>
         </div>
-        <button class="weather-btn" onclick="showWeather('${capital}', '${country.name.common}')">
+        <button class="weather-btn" onclick="showWeather('${safeCapital}', '${safeCountryName}')">
             View Weather
         </button>
     `;
@@ -108,7 +122,7 @@ function createCountryCard(country) {
 }
 
 function showWeather(city, countryName) {
-    if (city === "N/A") {
+    if (city === "N/A" || !city) {
         alert("No capital city available for weather data");
         return;
     }
@@ -119,7 +133,7 @@ function showWeather(city, countryName) {
     document.getElementById("weatherModal").style.display = "block";
     document.getElementById("modalOverlay").style.display = "block";
 
-    var fullUrl = weatherUrl + "?q=" + city + "&appid=" + weatherApiKey + "&units=metric";
+    var fullUrl = weatherUrl + "?q=" + encodeURIComponent(city) + "&appid=" + weatherApiKey + "&units=metric";
 
     fetch(fullUrl)
         .then(function(response) {
@@ -133,7 +147,7 @@ function showWeather(city, countryName) {
             displayWeatherData(data);
         })
         .catch(function(error) {
-            document.getElementById("weatherInfo").innerHTML = "<p>Weather data not available</p>";
+            document.getElementById("weatherInfo").innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #7f8c8d;'>Weather data not available. Please verify your OpenWeather API key.</p>";
         });
 }
 
@@ -175,7 +189,7 @@ function showLoading() {
 function showError(message) {
     document.getElementById("displayArea").innerHTML = `
         <div class="loading">
-            <p>${message}</p>
+            <p style="color: #e74c3c;">${message}</p>
         </div>
     `;
 }
